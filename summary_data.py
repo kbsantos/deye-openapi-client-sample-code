@@ -11,6 +11,198 @@ from datetime import datetime, timedelta
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'solar_data.db')
 
+def get_summary_by_month(): 
+  if not os.path.exists(DB_PATH):
+    print("Database not found. Run db_setup.py first.")
+    return
+
+  conn = sqlite3.connect(DB_PATH)
+  cursor = conn.cursor()
+  query = """
+    SELECT
+        t.billing_month as Cutoff,
+        printf('%05.2f', ROUND(gr.sell_rate_kwh, 2))                                    AS sell,
+        printf('%05.2f', ROUND(gr.buy_rate_kwh, 2))                                     AS buy,
+        printf('%07.2f', ROUND(SUM(t.grid_purchase_kwh), 2))                            AS purchase,
+        printf('%08.2f', ROUND((SUM(t.grid_purchase_kwh) *  gr.sell_rate_kwh), 2))      AS purchase_rate,
+        printf('%07.2f', ROUND(SUM(t.generated), 2))                                    AS generated,
+        printf('%08.2f', ROUND((SUM(t.generated) * gr.sell_rate_kwh), 2))               AS generated_rate,
+        printf('%07.2f', ROUND(SUM(t.grid_feedin_kwh), 2) )                             AS feedin,
+        printf('%08.2f', ROUND((SUM(t.grid_feedin_kwh) * gr.buy_rate_kwh), 2))          AS feedin_rate
+    FROM (
+        SELECT
+            strftime('%Y-%m', DATE(date, '-25 days')) AS billing_month,
+            strftime('%Y',   DATE(date, '-25 days')) AS rate_year,
+            strftime('%m',   DATE(date, '-25 days')) AS rate_month,
+            generation_kwh,
+            grid_feedin_kwh,
+            grid_purchase_kwh,
+            battery_charge_kwh,
+            battery_discharge_kwh,
+            (generation_kwh + battery_charge_kwh + battery_discharge_kwh) as generated
+        FROM daily_data
+    ) t
+    LEFT JOIN grid_rates gr
+        ON gr.year  = CAST(t.rate_year AS INTEGER)
+      AND gr.month = CAST(t.rate_month AS INTEGER)
+    GROUP BY
+        t.billing_month,
+        t.rate_year,
+        t.rate_month,
+        gr.sell_rate_kwh,
+        gr.buy_rate_kwh
+    ORDER BY t.billing_month;
+  """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+  columns = [description[0] for description in cursor.description]
+  conn.close()
+
+  if not rows:
+    print("No data found in database.")
+    return
+
+  print(f"\n{'='*60}")
+  print(f"Summary per Month")
+  print(f"{'='*60}\n")
+  print_results(columns, rows)
+   
+def get_summary_by_year(): 
+  if not os.path.exists(DB_PATH):
+    print("Database not found. Run db_setup.py first.")
+    return
+
+  conn = sqlite3.connect(DB_PATH)
+  cursor = conn.cursor()
+  query = """
+      SELECT
+          t.billing_year AS year,
+          printf('%08.2f', ROUND(SUM(t.grid_purchase_kwh), 2)) AS purchase,
+          printf('%09.2f', ROUND(SUM(t.grid_purchase_kwh * gr.sell_rate_kwh), 2)) AS purchase_rate,
+          printf('%08.2f', ROUND(SUM(t.generated), 2)) AS generated,
+          printf('%09.2f', ROUND(SUM(t.generated * gr.sell_rate_kwh), 2)) AS generated_rate,
+          printf('%08.2f', ROUND(SUM(t.grid_feedin_kwh), 2)) AS feedin,
+          printf('%09.2f', ROUND(SUM(t.grid_feedin_kwh * gr.buy_rate_kwh), 2)) AS feedin_rate
+
+      FROM (
+          SELECT
+              strftime('%Y', DATE(date, '-25 days')) AS billing_year,
+              strftime('%Y', DATE(date, '-25 days')) AS rate_year,
+              strftime('%m', DATE(date, '-25 days')) AS rate_month,
+
+              generation_kwh,
+              grid_feedin_kwh,
+              grid_purchase_kwh,
+              battery_charge_kwh,
+              battery_discharge_kwh,
+
+              (generation_kwh + battery_charge_kwh + battery_discharge_kwh) AS generated
+          FROM daily_data
+      ) t
+      LEFT JOIN grid_rates gr
+        ON gr.year  = CAST(t.rate_year AS INTEGER)
+      AND gr.month = CAST(t.rate_month AS INTEGER)
+
+      GROUP BY t.billing_year
+      ORDER BY t.billing_year
+    """
+  cursor.execute(query)
+  rows = cursor.fetchall()
+  columns = [description[0] for description in cursor.description]
+  conn.close()
+
+  if not rows:
+    print("No data found in database.")
+    return
+
+  print(f"\n{'='*60}")
+  print(f"Summary per Year")
+  print(f"{'='*60}\n")
+  print_results(columns, rows)
+   
+def get_summary_by_roi(): 
+  if not os.path.exists(DB_PATH):
+    print("Database not found. Run db_setup.py first.")
+    return
+
+  conn = sqlite3.connect(DB_PATH)
+  cursor = conn.cursor()
+  query = """
+    SELECT
+      CAST(running_months AS INTEGER)               AS running_month,
+      CAST(kwhpm AS INTEGER)                        AS ave_kwh_month,
+      CAST(apm AS INTEGER)                          AS ave_rate_month,
+      CAST(generated_kwh AS INTEGER)                AS total_kwh,
+      CAST(generated_rate AS INTEGER)               AS total_rate,
+      750000                                        AS investments,
+      ROUND((750000 - generated_rate), 2)           AS remaining_roi,
+      ROUND(((750000 - generated_rate) / apm) , 2)  AS remaining_month_roi
+    FROM 
+      (SELECT 
+          printf('%09.2f', ROUND(SUM(t.generated) + SUM(t.grid_feedin_kwh), 2)) AS generated_kwh,
+          printf('%10.2f', ROUND((SUM(t.generated * gr.sell_rate_kwh) + SUM(t.grid_feedin_kwh * gr.buy_rate_kwh)), 2)) AS generated_rate,
+          COUNT(DISTINCT t.billing_year || '-' || t.rate_month) AS running_months,
+          ROUND(((SUM(t.generated * gr.sell_rate_kwh) + SUM(t.grid_feedin_kwh * gr.buy_rate_kwh)) /  COUNT(DISTINCT t.billing_year || '-' || t.rate_month)), 2) AS apm,
+          ROUND(((SUM(t.generated) + SUM(t.grid_feedin_kwh)) /  COUNT(DISTINCT t.billing_year || '-' || t.rate_month)), 2) AS kwhpm
+
+        FROM (
+            SELECT
+                strftime('%Y', DATE(date, '-25 days')) AS billing_year,
+                strftime('%m', DATE(date, '-25 days')) AS rate_month,
+                generation_kwh,
+                grid_feedin_kwh,
+                battery_charge_kwh,
+                battery_discharge_kwh,
+
+                (generation_kwh + battery_charge_kwh + battery_discharge_kwh) AS generated
+            FROM daily_data
+        ) t
+        LEFT JOIN grid_rates gr
+          ON gr.year  = CAST(t.billing_year AS INTEGER)
+        AND gr.month = CAST(t.rate_month AS INTEGER)
+      ) tot ;
+    """
+  cursor.execute(query)
+  row = cursor.fetchone()
+  conn.close()
+
+  if not row:
+    print("No data found in database.")
+    return
+
+  running_month, ave_kwh_month, ave_rate_month, total_kwh, total_rate, investments, remaining_roi, remaining_month_roi = row
+
+  print(f"\n{'='*60}")
+  print(f"Summary ROI")
+  print(f"{'='*60}\n")
+  print(f"Investment: {investments}\n")
+
+  print(f"Return Of Investment:")
+  print(f"  Remaining: {remaining_roi:.1f} peso")
+  print(f"  Remaining Months: {remaining_month_roi:.1f}")
+  
+  print(f"\nGeneration:")
+  print(f"  Total: {total_kwh:.1f} kWh")
+  print(f"  Total Rate: {total_rate:.1f} peso")
+  print(f"  Average: {ave_kwh_month:.1f} kWh/m")
+  print(f"  Average Rate: {ave_rate_month:.1f} peso/m \n")
+ 
+  
+def print_results(columns, results):
+    """Print query results in a formatted table"""
+    if not results:
+        print("No results found.")
+        return
+
+    # Print header
+    print(" | ".join(columns))
+    print("-" * (sum(len(col) for col in columns) + 3 * (len(columns) - 1)))
+
+    # Print rows
+    for row in results:
+        print(" | ".join(str(val) for val in row))
+    print()
+
 def get_recent_data(days=7):
     """Get recent data for specified number of days"""
     if not os.path.exists(DB_PATH):
@@ -245,6 +437,10 @@ def main():
             start = sys.argv[2]
             end = sys.argv[3]
             get_date_range_summary(start, end)
+        elif command == 'all':
+            get_summary_by_roi()
+            get_summary_by_year()
+            get_summary_by_month()
         elif command.isdigit():
             days = int(command)
             get_recent_data(days)
@@ -252,6 +448,7 @@ def main():
             print("Usage:")
             print("  python summary_data.py                         # View last 7 days")
             print("  python summary_data.py 30                      # View last 30 days")
+            print("  python summary_data.py all                     # All Summaries")
             print("  python summary_data.py month 2026 1            # Monthly summary")
             print("  python summary_data.py range 2026-01-01 2026-01-31    # Date range data")
             print("  python summary_data.py summary 2026-01-01 2026-01-31  # Date range summary")

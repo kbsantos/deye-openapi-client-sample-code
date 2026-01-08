@@ -49,6 +49,57 @@ def create_database():
     )
     ''')
 
+
+    # Create index on date for faster queries
+    cursor.execute('''
+      DROP TABLE IF EXISTS grid_rates;
+    ''')
+
+
+    # Create grid_rate table
+    cursor.execute('''
+    CREATE TABLE grid_rates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+        sell_rate_kwh REAL,
+        buy_rate_kwh REAL
+    )
+    ''')
+
+    rates = [
+        (1, 2024, 6,  9.76, 0),
+        (2, 2024, 7, 11.91, 0),
+        (3, 2024, 8, 11.91, 0),
+        (4, 2024, 9, 11.91, 0),
+        (5, 2024, 10, 11.91, 0),
+        (6, 2024, 11, 11.91, 0),
+        (7, 2024, 12, 11.91, 0),
+        (8, 2025, 1, 11.53, 0),
+        (9, 2025, 2,  7.25, 0),
+        (10, 2025, 3,  2.47, 0),
+        (11, 2025, 4, 11.29, 0),
+        (12, 2025, 5, 10.92, 0),
+        (13, 2025, 6, 11.29, 0),
+        (14, 2025, 7, 11.29, 0),
+        (15, 2025, 8, 10.54, 0),
+        (16, 2025, 9, 10.48, 0),
+        (17, 2025, 10, 10.54, 4.53),
+        (18, 2025, 11, 10.54, 4.53),
+        (19, 2025, 12, 10.54, 4.53)
+    ]
+
+    cursor.executemany(
+        """
+        INSERT INTO grid_rates
+        (id, year, month, sell_rate_kwh, buy_rate_kwh)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        rates
+    )
+
+
+
     conn.commit()
     conn.close()
 
