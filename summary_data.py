@@ -20,7 +20,7 @@ def get_summary_by_month():
   cursor = conn.cursor()
   query = """
     SELECT
-        t.billing_month as Cutoff,
+        t.billing_month                                                                 AS Month,
         printf('%05.2f', ROUND(gr.sell_rate_kwh, 2))                                    AS sell,
         printf('%05.2f', ROUND(gr.buy_rate_kwh, 2))                                     AS buy,
         printf('%07.2f', ROUND(SUM(t.grid_purchase_kwh), 2))                            AS purchase,
@@ -62,9 +62,9 @@ def get_summary_by_month():
     print("No data found in database.")
     return
 
-  print(f"\n{'='*60}")
+  print(f"\n{'='*120}")
   print(f"Summary per Month")
-  print(f"{'='*60}\n")
+  print(f"{'='*120}\n")
   print_results(columns, rows)
    
 def get_summary_by_year(): 
@@ -115,9 +115,9 @@ def get_summary_by_year():
     print("No data found in database.")
     return
 
-  print(f"\n{'='*60}")
+  print(f"\n{'='*120}")
   print(f"Summary per Year")
-  print(f"{'='*60}\n")
+  print(f"{'='*120}")
   print_results(columns, rows)
    
 def get_summary_by_roi(): 
@@ -172,9 +172,9 @@ def get_summary_by_roi():
 
   running_month, ave_kwh_month, ave_rate_month, total_kwh, total_rate, investments, remaining_roi, remaining_month_roi = row
 
-  print(f"\n{'='*60}")
+  print(f"\n{'='*120}")
   print(f"Summary ROI")
-  print(f"{'='*60}\n")
+  print(f"{'='*120}\n")
   print(f"Investment: {investments}\n")
 
   print(f"Return Of Investment:")
@@ -185,7 +185,8 @@ def get_summary_by_roi():
   print(f"  Total: {total_kwh:.1f} kWh")
   print(f"  Total Rate: {total_rate:.1f} peso")
   print(f"  Average: {ave_kwh_month:.1f} kWh/m")
-  print(f"  Average Rate: {ave_rate_month:.1f} peso/m \n")
+  print(f"  Average Rate: {ave_rate_month:.1f} peso/m\n")
+  print(f"{'*'*120}\n")
  
   
 def print_results(columns, results):
@@ -196,12 +197,14 @@ def print_results(columns, results):
 
     # Print header
     print(" | ".join(columns))
-    print("-" * (sum(len(col) for col in columns) + 3 * (len(columns) - 1)))
+    print("-" * 120)
 
     # Print rows
     for row in results:
         print(" | ".join(str(val) for val in row))
     print()
+
+    print(f"{'*'*120}\n")
 
 def get_recent_data(days=7):
     """Get recent data for specified number of days"""
