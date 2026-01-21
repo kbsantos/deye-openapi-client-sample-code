@@ -1,0 +1,23 @@
+feat: Refactor project structure and add new utility scripts
+
+This commit introduces a significant refactoring of the project's directory structure
+to improve organization and maintainability. Key changes include:
+
+- Moved  to .
+- Moved  to .
+- Created a new  directory containing database-related scripts:
+    -  (moved and updated)
+    -  (new)
+    -  (new)
+- Created a new  directory for setup scripts:
+    -  (new)
+    -  (new)
+- Updated , , and  to correctly locate
+  the project root and database path after the restructuring.
+- Added  for project overview.
+- Added  to exclude temporary and sensitive files (e.g., ,
+  , ).
+
+These changes aim to centralize client-related code, database management, and setup
+scripts within the  directory, making the project structure more modular
+and easier to navigate.

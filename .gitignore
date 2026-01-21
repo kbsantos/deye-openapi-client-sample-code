@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+
+# Database
+solar_data.db
+
+# Backups
+*.bak
