@@ -7,3 +7,7 @@ solar_data.db
 
 # Backups
 *.bak
+
+# Credentials
+clientcode/account/obtain_token.py
+clientcode/variable.py
