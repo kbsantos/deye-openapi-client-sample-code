@@ -87,37 +87,36 @@ def map_api_to_db(station_data):
     }
 
 def backfill_daily_logs(station_id, start_date, end_date):
-    """Backfill daily logs for a station between two dates with proper chunking"""
+    """Backfill daily logs for a station between two dates with individual daily API calls"""
     start_dt = datetime.strptime(start_date, '%Y-%m-%d')
     end_dt = datetime.strptime(end_date, '%Y-%m-%d')
     
-    # Calculate total days and number of chunks
+    # Calculate total days
     total_days = (end_dt - start_dt).days + 1
     print(f"Processing {total_days} days from {start_date} to {end_date}")
     print(f"Station ID: {station_id}")
     
-    current_start = start_dt
+    current_date = start_dt
     total_records = 0
-    chunk_count = 0
+    day_count = 0
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    while current_start <= end_dt:
-        # Process in 30-day chunks (API limit is 31 days)
-        current_end = min(current_start + timedelta(days=29), end_dt)  # 30 days inclusive
-        chunk_count += 1
-
-        print(f"\nChunk {chunk_count}: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
+    while current_date <= end_dt:
+        day_count += 1
+        date_str = current_date.strftime('%Y-%m-%d')
         
-        # Convert to datetime strings for API
-        start_str = current_start.strftime('%Y-%m-%d %H:%M:%S')
-        end_str = (current_end + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')  # Include end date
+        print(f"\nDay {day_count}/{total_days}: {date_str}")
         
-        # Get station history
+        # Create datetime strings for single day API call
+        start_str = current_date.strftime('%Y-%m-%d %H:%M:%S')
+        end_str = (current_date + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Get station history for this single day
         station_data = get_station_history(station_id, start_str, end_str)
         
-        chunk_records = 0
+        day_records = 0
         
         if station_data:
             # Map and insert data
@@ -142,24 +141,24 @@ def backfill_daily_logs(station_id, start_date, end_date):
                         mapped_data['generator_kw'],
                         mapped_data['grid_tied_inverter_power_kw']
                     ))
-                    chunk_records += 1
+                    day_records += 1
             
             conn.commit()
-            print(f"✅ Saved {chunk_records} frame-level records for this chunk")
+            print(f"✅ Saved {day_records} frame-level records for {date_str}")
         else:
-            print("⚠️  No frame-level data received for this chunk")
+            print(f"⚠️  No frame-level data received for {date_str}")
         
-        total_records += chunk_records
-        current_start = current_end + timedelta(days=1)
+        total_records += day_records
+        current_date += timedelta(days=1)
 
         # Small delay to avoid rate limiting
-        if current_start <= end_dt:
+        if current_date <= end_dt:
             time.sleep(1)
     
     conn.close()
     
     print(f"\n{'='*60}")
-    print(f"Backfill complete: {total_records} records saved from {chunk_count} chunks")
+    print(f"Backfill complete: {total_records} records saved from {day_count} days")
     print(f"{'='*60}")
     
     return total_records
