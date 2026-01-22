@@ -1,45 +1,68 @@
-# DeyeCloud API v1 sample code 
+# GEMINI.md
 
-Sample code for the DeyeCloud API v1 endpoints.
-Individual API features have folders where you can find examples of usage in Python.
+## Project Overview
 
-* [DeyeCloud API Documentation](https://developer.deyecloud.com/api)
+This project is a Python-based tool for interacting with the DeyeCloud API to monitor and control a solar energy system. It allows users to fetch data from their solar installation, store it in a local SQLite database, and generate reports. The project also includes scripts for controlling the solar energy system, such as setting the battery mode and updating system parameters.
 
-## Prerequisites
+The project is structured into several directories:
+- `clientcode/account`: Scripts for managing API credentials and obtaining access tokens.
+- `clientcode/commission`: Scripts for controlling the solar energy system.
+- `clientcode/database`: Scripts for database setup and management.
+- `clientcode/device`: Scripts for obtaining device information.
+- `clientcode/reports`: Scripts for generating reports from the collected data.
+- `clientcode/setup`: Scripts for setting up the project, including API credential configuration and cron job setup.
+- `clientcode/station`: Scripts for obtaining station information.
+- `clientcode/strategy`: Scripts for implementing different energy management strategies.
 
-* Create a DeyeCloud account ([sign up here](https://www.deyecloud.com/login))
-* Create a DeyeCloud application [in the developer portal](https://developer.deyecloud.com/app)
+## Building and Running
 
-## Getting started
+### 1. Initial Setup
 
-To learn the basics of the DeyeCloud API concepts and usage, refer to the [QuickStart Documentation](https://developer.deyecloud.com/start) 
+The first step is to set up the API credentials. This is done by running the `setup_token.sh` script:
 
-## Using the code samples
-
-### Python environment set up
-
-You will need to have Python 3 installed to run this code. The Python samples use `requests==2.31.0`.
-You can install this package as follows:
 ```bash
-pip install requests
+bash clientcode/setup/setup_token.sh
 ```
-Find your AppId & AppSecret in the [Application of the developer portal](https://developer.deyecloud.com/app)
 
-In order to run the samples in this repository you will need to obtain access token firstly through [obtain_token.py](clientcode%2Faccount%2Fobtain_token.py)
+This script will prompt for your DeyeCloud email, password, AppId, and AppSecret. It will then obtain an access token and store all the necessary credentials in the `clientcode/variable.py` file.
 
+### 2. Database Setup
 
+Once the credentials are configured, you need to set up the SQLite database. This is done by running the `db_setup.py` script:
 
+```bash
+python3 clientcode/database/manage/db_setup.py
+```
 
-## Additional resources
+This script will create the `solar_data.db` file in the `clientcode/database` directory and set up the necessary tables.
 
-* [Device Wifi Configuration Manual](https://developer.deyecloud.com/support/app/wifiConfiguration)
-* [DeyeCloud Data Migration Manual](https://developer.deyecloud.com/support/app/dataMigration)
+### 3. Data Collection
 
-## Support
-* For general questions related to the API and its features, please send the email to cloudservice@deye.com.cn
+The project is designed to automatically collect data every day using a cron job. To set up the cron job, run the `setup_cron.py` script:
 
-* If there's a bug or issue with the sample code itself, please create a new issue on GitHub
+```bash
+python3 clientcode/setup/cron/setup_cron.py
+```
 
-## Contributing
+This will set up a cron job that runs the `daily_update.py` script every day at 6 AM. This script fetches the previous day's data from the DeyeCloud API and stores it in the local database.
 
-We welcome pull requests that add meaningful additions to these code samples
+You can also manually backfill data for a specific period using the `backfill_data.py` and `backfill_daily_logs.py` scripts in the `clientcode/database/manage` directory.
+
+### 4. Running Reports
+
+Once you have collected some data, you can generate reports using the scripts in the `clientcode/reports` directory. For example, to view a summary of the frame-level data for a specific date, you can run:
+
+```bash
+python3 clientcode/reports/frame_summary.py --date 2025-01-15
+```
+
+## Development Conventions
+
+- The project is written in Python 3.
+- It uses the `requests` library for making API calls and the `sqlite3` library for database interaction.
+- The project is intended to be run from the root directory.
+- Scripts that interact with the DeyeCloud API rely on credentials stored in `clientcode/variable.py`.
+- The database schema is defined in `clientcode/database/manage/db_setup.py`.
+- The core data collection logic is in `clientcode/setup/cron/daily_update.py`.
+- Control scripts in `clientcode/commission` allow for direct interaction with the solar energy system.
+- The `clientcode/strategy` directory contains scripts for implementing different energy management strategies.
