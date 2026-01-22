@@ -132,10 +132,7 @@ def backfill_date_range(start_date_str, end_date_str):
     """Backfill data for a date range"""
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-
-    if (end_date - start_date).days > 31:
-        print("Warning: Date range exceeds 31 days. Processing in chunks...")
-
+    # Note: Removed 31-day limit validation to allow longer historical backfill
     current_start = start_date
     total_saved = 0
 
