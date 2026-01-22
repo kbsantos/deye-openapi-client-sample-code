@@ -84,7 +84,7 @@ def fetch_date_range_data(start_date_str, end_date_str, station_id):
         print(f"Error fetching data: {e}")
         return []
 
-def save_batch_to_database(data_items):
+def save_batch_to_database(data_items, station_id):
     """Save multiple days of data to database"""
     if not data_items:
         return 0
@@ -107,7 +107,7 @@ def save_batch_to_database(data_items):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ''', (
                 date_str,
-                STATION_ID,
+                station_id,
                 item.get('generationValue'),
                 item.get('gridValue'),
                 item.get('purchaseValue'),
@@ -128,40 +128,51 @@ def save_batch_to_database(data_items):
 
     return saved_count
 
-def backfill_date_range(start_date_str, end_date_str):
-    """Backfill data for a date range"""
+def backfill_date_range(start_date_str, end_date_str, station_id):
+    """Backfill data for a date range, splitting into 30-day chunks"""
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-    # Note: Removed 31-day limit validation to allow longer historical backfill
+    
+    # Calculate total days and number of chunks
+    total_days = (end_date - start_date).days + 1
+    print(f"Processing {total_days} days from {start_date_str} to {end_date_str}")
+    print(f"Station ID: {station_id}")
+    
     current_start = start_date
     total_saved = 0
+    chunk_count = 0
 
-    while current_start < end_date:
+    while current_start <= end_date:
         # Process in 30-day chunks (API limit is 31 days)
-        current_end = min(current_start + timedelta(days=30), end_date)
+        current_end = min(current_start + timedelta(days=29), end_date)  # 30 days inclusive
+        chunk_count += 1
 
-        print(f"\nFetching data: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
+        print(f"\nChunk {chunk_count}: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
 
         data = fetch_date_range_data(
             current_start.strftime('%Y-%m-%d'),
-            current_end.strftime('%Y-%m-%d')
+            current_end.strftime('%Y-%m-%d'),
+            station_id
         )
 
         if data:
-            saved = save_batch_to_database(data)
+            saved = save_batch_to_database(data, station_id)
             total_saved += saved
-            print(f"Saved {saved} days of data")
+            print(f"✅ Saved {saved} days of data")
         else:
-            print("No data received")
+            print("⚠️  No data received for this chunk")
 
-        current_start = current_end
+        current_start = current_end + timedelta(days=1)
 
         # Small delay to avoid rate limiting
-        time.sleep(1)
+        if current_start <= end_date:
+            time.sleep(1)
 
     print(f"\n{'='*60}")
-    print(f"Backfill complete: {total_saved} days saved")
+    print(f"Backfill complete: {total_saved} days saved from {chunk_count} chunks")
     print(f"{'='*60}")
+    
+    return total_saved
 
 def main():
     """Main execution"""
@@ -199,18 +210,13 @@ def main():
     
     print(f"Using station: {station_name} (ID: {station_id})")
     
-    # Fetch and save data
-    data_items = fetch_date_range_data(start_date, end_date, station_id)
+    # Backfill data using chunked approach
+    total_saved = backfill_date_range(start_date, end_date, station_id)
     
-    if isinstance(data_items, list):
-        saved_count = len(data_items)
+    if total_saved > 0:
+        print(f"\n🎉 Successfully backfilled {total_saved} days of data!")
     else:
-        saved_count = 0
-    
-    if saved_count > 0:
-        print(f"✅ Successfully saved {saved_count} daily records")
-    else:
-        print("⚠️  No data found for the specified date range")
+        print(f"\n⚠️  No data was saved. Check API availability or date range.")
 
 if __name__ == '__main__':
     sys.exit(main())
