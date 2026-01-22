@@ -163,17 +163,17 @@ def convert_timestamp(timestamp):
     return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 def map_api_to_db(station_data):
-    """Map API response fields to database fields"""
+    """Map API response fields to database fields, converting watts to kilowatts"""
     return {
         'timestamp': convert_timestamp(station_data.get('timeStamp')),
-        'production_kw': station_data.get('generationPower'),
-        'consumption_kw': station_data.get('consumptionPower'),
-        'grid_kw': station_data.get('gridPower'),
-        'battery_kw': station_data.get('batteryPower'),
-        'soc_percent': station_data.get('batterySOC'),
-        'pv_kw': station_data.get('generationPower'),  # Using generationPower as PV power
+        'production_kw': (station_data.get('generationPower') or 0) / 1000 if station_data.get('generationPower') is not None else None,
+        'consumption_kw': (station_data.get('consumptionPower') or 0) / 1000 if station_data.get('consumptionPower') is not None else None,
+        'grid_kw': (station_data.get('gridPower') or 0) / 1000 if station_data.get('gridPower') is not None else None,
+        'battery_kw': (station_data.get('batteryPower') or 0) / 1000 if station_data.get('batteryPower') is not None else None,
+        'soc_percent': station_data.get('batterySOC'),  # SOC remains as percentage
+        'pv_kw': (station_data.get('generationPower') or 0) / 1000 if station_data.get('generationPower') is not None else None,  # Using generationPower as PV power
         'generator_kw': None,  # Not available in API response
-        'grid_tied_inverter_power_kw': station_data.get('wirePower')
+        'grid_tied_inverter_power_kw': (station_data.get('wirePower') or 0) / 1000 if station_data.get('wirePower') is not None else None
     }
 
 def save_daily_logs(date, station_id):
