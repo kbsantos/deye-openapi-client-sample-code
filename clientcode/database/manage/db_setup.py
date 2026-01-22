@@ -49,6 +49,35 @@ def create_database():
     )
     ''')
 
+    # Create daily_logs table for detailed solar metrics
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS daily_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TIMESTAMP NOT NULL,
+        station_id INTEGER NOT NULL,
+        production_kw REAL,
+        consumption_kw REAL,
+        grid_kw REAL,
+        battery_kw REAL,
+        soc_percent REAL,
+        pv_kw REAL,
+        generator_kw REAL,
+        grid_tied_inverter_power_kw REAL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (station_id) REFERENCES station_info(station_id)
+    )
+    ''')
+
+    # Create index on timestamp for faster queries
+    cursor.execute('''
+    CREATE INDEX IF NOT EXISTS idx_daily_logs_timestamp ON daily_logs(timestamp)
+    ''')
+
+    # Create index on station_id for faster queries
+    cursor.execute('''
+    CREATE INDEX IF NOT EXISTS idx_daily_logs_station_id ON daily_logs(station_id)
+    ''')
+
 
     # Create index on date for faster queries
     cursor.execute('''

@@ -59,17 +59,39 @@ if [ -z "$EMAIL" ] || [ -z "$PASSWORD" ] || [ -z "$APPID" ] || [ -z "$APPSECRET"
     exit 1
 fi
 
-echo -e "${BLUE}Updating obtain_token.py with credentials...${NC}"
+echo -e "${BLUE}Updating variable.py with credentials...${NC}"
 
 # Create backup
-cp "$OBTAIN_TOKEN_FILE" "${OBTAIN_TOKEN_FILE}.bak"
-echo -e "${GREEN}Backup created: ${OBTAIN_TOKEN_FILE}.bak${NC}"
+cp "$VARIABLE_FILE" "${VARIABLE_FILE}.bak"
+echo -e "${GREEN}Backup created: ${VARIABLE_FILE}.bak${NC}"
 
-# Update obtain_token.py with sed (macOS compatible)
-sed -i "s/appId = '[^']*'/appId = '${APPID}'/" "$OBTAIN_TOKEN_FILE"
-sed -i "s/password = '[^']*'/password = '${PASSWORD}'/" "$OBTAIN_TOKEN_FILE"
-sed -i 's/"appSecret": "[^"]*"/"appSecret": "'"${APPSECRET}"'"/' "$OBTAIN_TOKEN_FILE"
-sed -i 's/"email": "[^"]*"/"email": "'"${EMAIL}"'"/' "$OBTAIN_TOKEN_FILE"
+# Check if variables already exist and remove them
+if grep -q "app_id = " "$VARIABLE_FILE"; then
+    sed -i '/^app_id = /d' "$VARIABLE_FILE"
+fi
+if grep -q "app_secret = " "$VARIABLE_FILE"; then
+    sed -i '/^app_secret = /d' "$VARIABLE_FILE"
+fi
+if grep -q "email = " "$VARIABLE_FILE"; then
+    sed -i '/^email = /d' "$VARIABLE_FILE"
+fi
+if grep -q "company_id = " "$VARIABLE_FILE"; then
+    sed -i '/^company_id = /d' "$VARIABLE_FILE"
+fi
+if grep -q "password = " "$VARIABLE_FILE"; then
+    sed -i '/^password = /d' "$VARIABLE_FILE"
+fi
+
+# Add new variables to variable.py
+cat >> "$VARIABLE_FILE" << EOF
+
+# Token Configuration Variables
+app_id = "$APPID"
+app_secret = "$APPSECRET"
+email = "$EMAIL"
+company_id = "0"
+password = "$PASSWORD"
+EOF
 
 echo -e "${GREEN}Credentials updated successfully${NC}"
 echo ""
@@ -124,7 +146,7 @@ echo -e "${GREEN}Token obtained successfully!${NC}"
 echo -e "${BLUE}Token: ${TOKEN:0:50}...${NC}"
 echo ""
 
-# Update variable.py with the new token
+# Update token in variable.py
 echo -e "${BLUE}Updating variable.py with new token...${NC}"
 
 # Create backup

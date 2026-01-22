@@ -9,5 +9,4 @@ solar_data.db
 *.bak
 
 # Credentials
-clientcode/account/obtain_token.py
 clientcode/variable.py

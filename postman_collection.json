@@ -1,0 +1,373 @@
+{
+	"info": {
+		"_postman_id": "solar-api-collection",
+		"name": "Deye Solar API",
+		"description": "API collection for Deye Solar Cloud Platform",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Obtain Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"appSecret\": \"31542b5feffc46e9f21c4b09851f3f0f\",\n    \"email\": \"krssantos18@gmail.com\",\n    \"companyId\": \"0\",\n    \"password\": \"{{password_sha256}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/account/token?appId={{app_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"account",
+								"token"
+							],
+							"query": [
+								{
+									"key": "appId",
+									"value": "{{app_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Account Info",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/account/info",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"account",
+								"info"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Station Management",
+			"item": [
+				{
+					"name": "Get Station List",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"page\": 1,\n    \"size\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/station/list",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"station",
+								"list"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Station Latest Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stationId\": \"{{station_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/station/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"station",
+								"latest"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Station History",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stationId\": \"{{station_id}}\",\n    \"startTime\": \"{{start_time}}\",\n    \"endTime\": \"{{end_time}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/station/history",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"station",
+								"history"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Device Management",
+			"item": [
+				{
+					"name": "Get Device List",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"page\": 1,\n    \"size\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/list",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"list"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Device Latest Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"deviceId\": \"{{device_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/latest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"latest"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Device History",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"deviceId\": \"{{device_id}}\",\n    \"startTime\": \"{{start_time}}\",\n    \"endTime\": \"{{end_time}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/history",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"history"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"item": [
+				{
+					"name": "Get Summary Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"stationId\": \"{{station_id}}\",\n    \"startTime\": \"{{start_time}}\",\n    \"endTime\": \"{{end_time}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/report/summary",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"report",
+								"summary"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://eu.deyecloud.com",
+			"type": "string"
+		},
+		{
+			"key": "app_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "station_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "device_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "password_sha256",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "start_time",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "end_time",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

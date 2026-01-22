@@ -33,19 +33,41 @@ else:
 
 from clientcode import variable
 
-DB_PATH = os.path.join(project_root, 'clientcode', 'database', 'solar_data.db')
-STATION_ID = 61086157
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'solar_data.db')
 
-def fetch_date_range_data(start_date, end_date):
+def get_station_list():
+    """Get list of stations"""
+    url = variable.baseurl + '/station/list'
+    headers = variable.headers
+    data = {
+        "page": 1,
+        "size": 100
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        result = response.json()
+        
+        if result.get('success'):
+            return result.get('stationList', [])
+        else:
+            print(f"Error getting station list: {result.get('msg')}")
+            return []
+    except Exception as e:
+        print(f"Exception getting station list: {e}")
+        return []
+
+def fetch_date_range_data(start_date_str, end_date_str, station_id):
     """Fetch data for a date range from API"""
     url = variable.baseurl + '/station/history'
     headers = variable.headers
-
+    
     data = {
-        "stationId": STATION_ID,
+        "stationId": station_id,
         "granularity": 2,  # Daily granularity
-        "startAt": start_date,
-        "endAt": end_date
+        "startAt": start_date_str,
+        "endAt": end_date_str
     }
 
     try:
@@ -152,46 +174,46 @@ def main():
         from db_setup import create_database
         create_database()
 
-    if len(sys.argv) < 2:
-        print("Usage: python backfill_data.py START_DATE END_DATE")
-        print("Example: python backfill_data.py 2026-01-01 2026-01-07")
-        print("\nOr use quick options:")
-        print("  python backfill_data.py last7   # Last 7 days")
-        print("  python backfill_data.py last30  # Last 30 days")
-        return 1
-
-    arg1 = sys.argv[1]
-
-    # Handle quick options
-    if arg1 == 'last7':
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
-        start_date_str = start_date.strftime('%Y-%m-%d')
-        end_date_str = end_date.strftime('%Y-%m-%d')
-    elif arg1 == 'last30':
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
-        start_date_str = start_date.strftime('%Y-%m-%d')
-        end_date_str = end_date.strftime('%Y-%m-%d')
+    # Parse command line arguments
+    if len(sys.argv) == 3:
+        start_date = sys.argv[1]
+        end_date = sys.argv[2]
+    elif len(sys.argv) == 2 and sys.argv[1] in ['last7', 'last30']:
+        if sys.argv[1] == 'last7':
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        else:  # last30
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
     else:
-        # Regular date range mode
-        if len(sys.argv) != 3:
-            print("Error: Date range mode requires two dates")
-            print("Usage: python backfill_data.py START_DATE END_DATE")
-            return 1
-        start_date_str = arg1
-        end_date_str = sys.argv[2]
+        print("Invalid arguments. Use the format above.")
+        return
 
-    # Validate date format
-    try:
-        datetime.strptime(start_date_str, '%Y-%m-%d')
-        datetime.strptime(end_date_str, '%Y-%m-%d')
-    except ValueError:
-        print("Error: Invalid date format. Use YYYY-MM-DD")
-        return 1
-
-    backfill_date_range(start_date_str, end_date_str)
-    return 0
+    print(f"Fetching data from {start_date} to {end_date}")
+    
+    # Get stations and use first one
+    stations = get_station_list()
+    if not stations:
+        print("No stations found. Please check your API credentials.")
+        return
+    
+    station_id = stations[0].get('id')
+    station_name = stations[0].get('sn', f"Station {station_id}")
+    
+    print(f"Using station: {station_name} (ID: {station_id})")
+    
+    # Fetch and save data
+    data_items = fetch_date_range_data(start_date, end_date, station_id)
+    
+    if isinstance(data_items, list):
+        saved_count = len(data_items)
+    else:
+        saved_count = 0
+    
+    if saved_count > 0:
+        print(f"✅ Successfully saved {saved_count} daily records")
+    else:
+        print("⚠️  No data found for the specified date range")
 
 if __name__ == '__main__':
     sys.exit(main())
