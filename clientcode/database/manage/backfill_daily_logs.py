@@ -87,33 +87,37 @@ def map_api_to_db(station_data):
     }
 
 def backfill_daily_logs(station_id, start_date, end_date):
-    """Backfill daily logs for a station between two dates"""
+    """Backfill daily logs for a station between two dates with proper chunking"""
+    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+    
+    # Calculate total days and number of chunks
+    total_days = (end_dt - start_dt).days + 1
+    print(f"Processing {total_days} days from {start_date} to {end_date}")
+    print(f"Station ID: {station_id}")
+    
+    current_start = start_dt
+    total_records = 0
+    chunk_count = 0
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
-    # Convert dates to timestamps for API
-    start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
-    end_timestamp = int(datetime.strptime(end_date, '%Y-%m-%d').timestamp()) + 86400  # Add one day
-    
-    print(f"Backfilling data for station {station_id} from {start_date} to {end_date}")
-    
-    # Get data in monthly chunks to avoid API limits
-    current_start = start_timestamp
-    chunk_days = 30  # Process 30 days at a time
-    
-    records_inserted = 0
-    
-    while current_start < end_timestamp:
-        chunk_end = min(current_start + (chunk_days * 86400), end_timestamp)
+
+    while current_start <= end_dt:
+        # Process in 30-day chunks (API limit is 31 days)
+        current_end = min(current_start + timedelta(days=29), end_dt)  # 30 days inclusive
+        chunk_count += 1
+
+        print(f"\nChunk {chunk_count}: {current_start.strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')}")
         
-        # Convert timestamps to strings for API
-        start_str = datetime.fromtimestamp(current_start).strftime('%Y-%m-%d %H:%M:%S')
-        end_str = datetime.fromtimestamp(chunk_end - 1).strftime('%Y-%m-%d %H:%M:%S')
-        
-        print(f"Fetching data from {start_str} to {end_str}")
+        # Convert to datetime strings for API
+        start_str = current_start.strftime('%Y-%m-%d %H:%M:%S')
+        end_str = (current_end + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')  # Include end date
         
         # Get station history
         station_data = get_station_history(station_id, start_str, end_str)
+        
+        chunk_records = 0
         
         if station_data:
             # Map and insert data
@@ -138,19 +142,27 @@ def backfill_daily_logs(station_id, start_date, end_date):
                         mapped_data['generator_kw'],
                         mapped_data['grid_tied_inverter_power_kw']
                     ))
-                    records_inserted += 1
+                    chunk_records += 1
             
             conn.commit()
-            print(f"Inserted {len(station_data)} records for this chunk")
+            print(f"✅ Saved {chunk_records} frame-level records for this chunk")
+        else:
+            print("⚠️  No frame-level data received for this chunk")
         
-        current_start = chunk_end
-        
-        # Rate limiting to avoid overwhelming the API
-        time.sleep(1)
+        total_records += chunk_records
+        current_start = current_end + timedelta(days=1)
+
+        # Small delay to avoid rate limiting
+        if current_start <= end_dt:
+            time.sleep(1)
     
     conn.close()
-    print(f"Backfill completed. Total records inserted: {records_inserted}")
-    return records_inserted
+    
+    print(f"\n{'='*60}")
+    print(f"Backfill complete: {total_records} records saved from {chunk_count} chunks")
+    print(f"{'='*60}")
+    
+    return total_records
 
 def main():
     """Main function to run the backfill"""
@@ -179,27 +191,25 @@ def main():
     print("Starting daily logs backfill...")
     print(f"Date range: {start_date} to {end_date}")
     
-    # Get stations
+    # Get stations and use first one
     stations = get_station_list()
     if not stations:
         print("No stations found. Please check your API credentials.")
         return
     
-    print(f"Found {len(stations)} stations")
+    station_id = stations[0].get('id')
+    station_name = stations[0].get('sn', f"Station {station_id}")
     
-    # Backfill for each station
-    for station in stations:
-        station_id = station.get('id')
-        station_name = station.get('sn', f"Station {station_id}")
-        
-        print(f"\nProcessing station: {station_name} (ID: {station_id})")
-        
-        try:
-            records = backfill_daily_logs(station_id, start_date, end_date)
-            print(f"Successfully backfilled {records} records for {station_name}")
-        except Exception as e:
-            print(f"Error backfilling station {station_name}: {e}")
-            continue
+    print(f"Found {len(stations)} stations")
+    print(f"Processing station: {station_name} (ID: {station_id})")
+    
+    # Backfill frame-level data using chunked approach
+    total_records = backfill_daily_logs(station_id, start_date, end_date)
+    
+    if total_records > 0:
+        print(f"\n🎉 Successfully backfilled {total_records} frame-level records!")
+    else:
+        print(f"\n⚠️  No frame-level data was saved. Check API availability or date range.")
     
     print("\nBackfill process completed!")
 
