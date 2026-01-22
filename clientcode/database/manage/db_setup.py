@@ -64,7 +64,8 @@ def create_database():
         generator_kw REAL,
         grid_tied_inverter_power_kw REAL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (station_id) REFERENCES station_info(station_id)
+        FOREIGN KEY (station_id) REFERENCES station_info(station_id),
+        UNIQUE(timestamp, station_id)
     )
     ''')
 
@@ -76,6 +77,11 @@ def create_database():
     # Create index on station_id for faster queries
     cursor.execute('''
     CREATE INDEX IF NOT EXISTS idx_daily_logs_station_id ON daily_logs(station_id)
+    ''')
+
+    # Create unique index for preventing duplicates
+    cursor.execute('''
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_logs_unique ON daily_logs(timestamp, station_id)
     ''')
 
 

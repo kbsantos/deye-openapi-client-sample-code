@@ -122,7 +122,7 @@ def backfill_daily_logs(station_id, start_date, end_date):
                 
                 if mapped_data['timestamp']:
                     cursor.execute('''
-                        INSERT OR REPLACE INTO daily_logs 
+                        INSERT OR IGNORE INTO daily_logs 
                         (timestamp, station_id, production_kw, consumption_kw, grid_kw, 
                          battery_kw, soc_percent, pv_kw, generator_kw, grid_tied_inverter_power_kw)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
