@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHON_PATH = os.path.join(BASE_DIR, 'venv', 'bin', 'python')
+PYTHON_PATH = "python3"  # Use system Python
 SCRIPT_PATH = os.path.join(BASE_DIR, 'daily_update.py')
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 LOG_PATH = os.path.join(LOG_DIR, 'cron.log')
@@ -105,9 +105,15 @@ def test_script():
     """Test if daily_update.py can run"""
     print("Testing daily_update.py...")
 
-    if not os.path.exists(PYTHON_PATH):
-        print(f"✗ Python not found at: {PYTHON_PATH}")
-        print("  Make sure you have created the virtual environment.")
+    # Check if python3 is available
+    try:
+        result = subprocess.run(['python3', '--version'], 
+                              capture_output=True, 
+                              text=True, 
+                              check=True)
+        print(f"✓ Python found: {result.stdout.strip()}")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("✗ Python3 not found. Please install Python3.")
         return False
 
     if not os.path.exists(SCRIPT_PATH):
